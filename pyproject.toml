@@ -1,0 +1,20 @@
+[project]
+name = "raw-to-native-rgb"
+version = "0.1.0"
+description = "Batch convert camera RAW files to native RGB TIFF via LibRaw dcraw_emu"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+raw-to-rgb = "raw_to_rgb.__main__:main"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["raw_to_rgb"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
