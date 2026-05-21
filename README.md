@@ -47,6 +47,8 @@ On first launch the log area confirms whether the binary was found.
 
 ## GUI overview
 
+![GUI](./docs/gui.png)
+
 | Section | Description |
 |---|---|
 | **Input RAW files** | Add individual files; supports multi-select and removal |
