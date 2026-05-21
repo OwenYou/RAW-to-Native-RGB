@@ -12,23 +12,31 @@ Output files are **linear, 16-bit, camera-native colour space** — no white bal
 
 ## Getting dcraw_emu
 
-**Windows** — download a pre-built binary from the [LibRaw download page](https://www.libraw.org/download) and place `dcraw_emu.exe` at:
+**Windows** — download a pre-built Win64 package from the [LibRaw download page](https://www.libraw.org/download) and copy two files from `LibRaw-x.xx.x-Win64\LibRaw-x.xx.x\bin\` into `bin/windows/`:
+
 ```
-bin/windows/dcraw_emu.exe
+bin/windows/dcraw_emu.exe   ← LibRaw-x.xx.x-Win64\LibRaw-x.xx.x\bin\dcraw_emu.exe
+bin/windows/libraw.dll      ← LibRaw-x.xx.x-Win64\LibRaw-x.xx.x\bin\libraw.dll
 ```
 
-**macOS** — install via Homebrew, then copy:
+Both files must be present — `dcraw_emu.exe` will fail with a DLL error if `libraw.dll` is missing.
+
+**macOS** — download a pre-built macOS package from the [LibRaw download page](https://www.libraw.org/download) and copy the binary from `LibRaw-x.xx.x-macOS/LibRaw-x.xx.x/bin/` into `bin/macos/`:
+
+```
+bin/macos/dcraw_emu         ← LibRaw-x.xx.x-macOS/LibRaw-x.xx.x/bin/dcraw_emu
+```
+
+Alternatively, install via Homebrew:
 ```bash
 brew install libraw
 cp $(which dcraw_emu) bin/macos/dcraw_emu
 ```
 
-You can also use the downloaded binary on macOS.
-
 ## Running
 
 ```bash
-uv run python -m raw_to_rgb
+uv run raw_to_rgb
 ```
 
 On first launch the log area confirms whether the binary was found.

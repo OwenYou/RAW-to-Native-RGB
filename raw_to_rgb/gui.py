@@ -49,7 +49,13 @@ def _run_one(
             lines.append(result.stderr.rstrip() + "\n")
         if not ok and result.stdout:
             lines.append(result.stdout.rstrip() + "\n")
-        lines.append("  OK\n" if ok else f"  [exit {result.returncode}]\n")
+        if ok:
+            lines.append("  OK\n")
+        else:
+            msg = f"  [exit {result.returncode}]"
+            if result.returncode == -1073741515:  # 0xC0000135 STATUS_DLL_NOT_FOUND
+                msg += "  — libraw.dll not found; copy it alongside dcraw_emu.exe into bin/windows/"
+            lines.append(msg + "\n")
     except Exception as exc:
         lines.append(f"  EXCEPTION: {exc}\n")
 
