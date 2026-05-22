@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from tkinter import filedialog, scrolledtext, ttk
 import tkinter as tk
+from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from raw_to_rgb.converter import BASE_OPTIONS, DEBAYER_ALGORITHMS, Converter, RAW_EXTENSIONS
 
@@ -90,7 +91,7 @@ def _convert_worker(
 
 # ── GUI ───────────────────────────────────────────────────────────────────────
 
-class App(tk.Tk):
+class App(TkinterDnD.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("RAW to Native RGB")
@@ -116,7 +117,7 @@ class App(tk.Tk):
         PAD = dict(padx=8, pady=4)
 
         # ── Input files ───────────────────────────────────────────────────────
-        frm_files = ttk.LabelFrame(self, text="Input RAW files")
+        frm_files = ttk.LabelFrame(self, text="Input RAW files  (drag & drop accepted)")
         frm_files.pack(fill="both", expand=False, **PAD)
 
         btn_bar = ttk.Frame(frm_files)
@@ -135,6 +136,8 @@ class App(tk.Tk):
         vsb.config(command=self._listbox.yview)
         vsb.pack(side="right", fill="y")
         self._listbox.pack(side="left", fill="both", expand=True)
+        self._listbox.drop_target_register(DND_FILES)
+        self._listbox.dnd_bind("<<Drop>>", self._on_drop)
 
         # ── Output folder ─────────────────────────────────────────────────────
         frm_out = ttk.LabelFrame(self, text="Output folder  (blank = same folder as each source file)")
@@ -229,6 +232,16 @@ class App(tk.Tk):
     def _clear_files(self) -> None:
         self._listbox.delete(0, tk.END)
         self._files.clear()
+        self._update_convert_btn()
+
+    def _on_drop(self, event) -> None:
+        existing = {str(p) for p in self._files}
+        for raw in self.tk.splitlist(event.data):
+            path = Path(raw)
+            if path.suffix.lower() in RAW_EXTENSIONS and str(path) not in existing:
+                self._files.append(path)
+                self._listbox.insert(tk.END, path.name)
+                existing.add(str(path))
         self._update_convert_btn()
 
     def _browse_out(self) -> None:

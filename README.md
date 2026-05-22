@@ -9,6 +9,7 @@ Output files are **linear, 16-bit, camera-native colour space** — no white bal
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) (dependency/environment manager)
 - `dcraw_emu` binary from LibRaw (see below)
+- [`tkinterdnd2`](https://pypi.org/project/tkinterdnd2/) (installed automatically via `uv sync`)
 
 ## Getting dcraw_emu
 
@@ -51,7 +52,7 @@ On first launch the log area confirms whether the binary was found.
 
 | Section | Description |
 |---|---|
-| **Input RAW files** | Add individual files; supports multi-select and removal |
+| **Input RAW files** | Add individual files or drag & drop from Explorer; supports multi-select and removal |
 | **Output folder** | Leave blank to write TIFFs beside each source file |
 | **Debayer algorithm** | Select demosaicing algorithm (see below) |
 | **Parallel jobs** | Number of files to convert simultaneously (1–8) |
