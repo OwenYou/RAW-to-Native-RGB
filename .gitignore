@@ -12,4 +12,5 @@ test_files/
 
 # keep bin subdirs but ignore actual binaries
 bin/windows/*.exe
+bin/windows/*.dll
 bin/macos/dcraw_emu
