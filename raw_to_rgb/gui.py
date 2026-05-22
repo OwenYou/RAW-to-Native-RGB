@@ -273,8 +273,8 @@ class App(TkinterDnD.Tk):
 
     def _build_options(self) -> list[str]:
         label = self._debayer_var.get()
-        q_value = next(v for lbl, v in DEBAYER_ALGORITHMS if lbl == label)
-        return BASE_OPTIONS + ["-q", q_value]
+        flags = next(f for lbl, f in DEBAYER_ALGORITHMS if lbl == label)
+        return BASE_OPTIONS + flags
 
     def _start(self) -> None:
         if not self._files:

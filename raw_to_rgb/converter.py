@@ -13,16 +13,17 @@ RAW_EXTENSIONS = {".arw", ".cr2", ".cr3", ".nef", ".orf", ".rw2", ".dng", ".raf"
 #   -T          write TIFF
 BASE_OPTIONS: list[str] = ["-r", "1", "1", "1", "1", "-M", "-o", "0", "-W", "-4", "-T"]
 
-# (label, -q value) pairs for the debayer algorithm selector
-DEBAYER_ALGORITHMS: list[tuple[str, str]] = [
-    ("DHT (12) — recommended", "12"),
-    ("AHD (3)", "3"),
-    ("Modified AHD / AAHD (13)", "13"),
-    ("LMMSE (11)", "11"),
-    ("DCB (4)", "4"),
-    ("PPG (2)", "2"),
-    ("VNG (1)", "1"),
-    ("Bilinear (0)", "0"),
+# (label, debayer flags) pairs for the debayer algorithm selector
+DEBAYER_ALGORITHMS: list[tuple[str, list[str]]] = [
+    ("DHT (12) — recommended",              ["-q", "12"]),
+    ("AHD (3)",                             ["-q", "3"]),
+    ("Modified AHD / AAHD (13)",            ["-q", "13"]),
+    ("LMMSE (11)",                          ["-q", "11"]),
+    ("DCB (4)",                             ["-q", "4"]),
+    ("PPG (2)",                             ["-q", "2"]),
+    ("VNG (1)",                             ["-q", "1"]),
+    ("Bilinear (0)",                        ["-q", "0"]),
+    ("No Debayer — Half Resolution Output", ["-q", "0", "-h"]),
 ]
 
 _BIN_ROOT = Path(__file__).parent.parent / "bin"
