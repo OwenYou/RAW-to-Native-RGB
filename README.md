@@ -85,3 +85,15 @@ The Convert button toggles to **Cancel**, which signals all in-flight workers to
 | 2 | PPG | |
 | 1 | VNG | Variable Number of Gradients |
 | 0 | Bilinear | Fastest, lowest quality |
+| — | No Debayer — Half Resolution Output | Skips demosaicing entirely; outputs each Bayer channel as-is at half resolution (`-q 0 -h`). See below. |
+
+## No Debayer mode — scanning chromogenic negatives
+
+When scanning chromogenic negative film on a Bayer-sensor camera, conventional demosaicing can introduce severe colour speckle. The dye clouds in the film grain are close in size to the Bayer mosaic pitch, which causes the demosaicing algorithm to produce extreme values that are meaningless in either colorimetry or densitometry — producing an unpleasant speckled pattern that is very difficult to remove in post.
+
+| Before (standard debayer) | After (no debayer) |
+|---|---|
+| ![Speckle example 1](./docs/Speckle01.png) | ![Speckle fixed 1](./docs/Speckle01-Fixed.png) |
+| ![Speckle example 2](./docs/Speckle02.png) | ![Speckle fixed 2](./docs/Speckle02-Fixed.png) |
+
+**No Debayer — Half Resolution Output** bypasses demosaicing entirely. Each RAW Bayer channel is directly saved, producing a clean, grain-consistent result without colour speckle. The trade-off is a 2× reduction in linear resolution (half width × half height), which is usually acceptable when the goal is to capture grain structure faithfully rather than resolve fine edge detail. Plus, one can sharpen the image later without having to deal with the speckle problem.
