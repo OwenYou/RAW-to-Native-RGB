@@ -32,20 +32,22 @@ def _run_one(
         q.put((_MSG_LOG, f"[skipped]  {src.name}\n"))
         return "skipped", src
 
-    cwd = out_dir if out_dir is not None else src.parent
     q.put((_MSG_FILE_START, src.name))
 
     lines: list[str] = [f"── {src.name} ──\n"]
     ok = False
     try:
-        cmd = [str(binary)] + options + [str(src)]
+        cmd = [str(binary)] + options
+        if out_dir is not None:
+            cmd += ["-Z", str(out_dir / (src.stem + ".tiff"))]
+        cmd += [str(src)]
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
-            cwd=str(cwd),
+            cwd=str(src.parent),
         )
         ok = result.returncode == 0
         if result.stderr:

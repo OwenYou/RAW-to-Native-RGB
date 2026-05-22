@@ -76,14 +76,14 @@ class Converter:
         options: list[str],
         log_fn=print,
     ) -> None:
-        cmd = [str(self.binary)] + options + [str(raw_file)]
+        cmd = [str(self.binary)] + options + ["-Z", str(output_dir / (raw_file.stem + ".tiff")), str(raw_file)]
         log_fn(f"  {raw_file.name} ...")
         try:
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                cwd=str(output_dir),
+                cwd=str(raw_file.parent),
             )
             if result.returncode != 0:
                 log_fn(f"    [ERROR] {result.stderr.strip() or result.stdout.strip()}")

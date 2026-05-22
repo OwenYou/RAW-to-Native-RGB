@@ -8,6 +8,7 @@ uv.lock
 dist/
 build/
 *.egg-info/
+test_files/
 
 # keep bin subdirs but ignore actual binaries
 bin/windows/*.exe
