@@ -93,7 +93,7 @@ When scanning chromogenic negative film on a Bayer-sensor camera, conventional d
 
 | Before (standard debayer) | After (no debayer) |
 |---|---|
-| ![Speckle example 1](./docs/Speckle01.png) | ![Speckle fixed 1](./docs/Speckle01-Fixed.png) |
-| ![Speckle example 2](./docs/Speckle02.png) | ![Speckle fixed 2](./docs/Speckle02-Fixed.png) |
+| ![Speckle example 1](./docs/Speckle01.jpg) | ![Speckle fixed 1](./docs/Speckle01-Fixed.jpg) |
+| ![Speckle example 2](./docs/Speckle02.jpg) | ![Speckle fixed 2](./docs/Speckle02-Fixed.jpg) |
 
 **No Debayer — Half Resolution Output** bypasses demosaicing entirely. Each RAW Bayer channel is directly saved, producing a clean, grain-consistent result without colour speckle. The trade-off is a 2× reduction in linear resolution (half width × half height), which is usually acceptable when the goal is to capture grain structure faithfully rather than resolve fine edge detail. Plus, one can sharpen the image later without having to deal with the speckle problem.
