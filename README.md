@@ -42,6 +42,8 @@ uv run raw_to_rgb
 
 On first launch the log area confirms whether the binary was found.
 
+**Windows — non-ASCII paths:** source files or output folders with characters outside the system code page (e.g. Chinese or Japanese directory names) are handled automatically via 8.3 short paths or a temporary hard-link, so no manual renaming is required.
+
 ## Supported RAW formats
 
 `.arw` `.cr2` `.cr3` `.nef` `.orf` `.rw2` `.dng` `.raf` `.raw`
@@ -56,10 +58,12 @@ On first launch the log area confirms whether the binary was found.
 | **Output folder** | Leave blank to write TIFFs beside each source file |
 | **Debayer algorithm** | Select demosaicing algorithm (see below) |
 | **Parallel jobs** | Number of files to convert simultaneously (1–8) |
-| **Progress** | Indeterminate activity bar + overall file counter |
+| **Progress** | Indeterminate activity bar + overall file counter showing `{success}✓ {errors}✗ / {total}` |
 | **Log** | Per-file output from `dcraw_emu`; cleared on each run |
 
 The Convert button toggles to **Cancel**, which signals all in-flight workers to skip remaining files.
+
+Failed conversions are **automatically retried once** after the initial pass completes. Listbox rows turn yellow during retry, green on success, and red on final failure.
 
 ## dcraw_emu flags used
 
