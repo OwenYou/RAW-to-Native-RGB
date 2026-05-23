@@ -1,7 +1,12 @@
+import atexit
+import os
 import queue
+import shutil
 import subprocess
 import sys
+import tempfile
 import threading
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from tkinter import filedialog, scrolledtext, ttk
@@ -9,6 +14,106 @@ import tkinter as tk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from raw_to_rgb.converter import BASE_OPTIONS, DEBAYER_ALGORITHMS, Converter, RAW_EXTENSIONS
+
+# dcraw_emu on Windows uses ANSI file APIs (narrow main()), so paths with
+# characters outside the system code page are corrupted by the CRT before the
+# file is opened.  Strategy (each step is a fallback for the previous):
+#   1. GetShortPathNameW — 8.3 short paths are always ASCII; works when NTFS
+#      8.3 name creation is enabled (the Windows default).
+#   2. Hard-link the source into a temp dir on the same drive whose full path
+#      is ASCII; run dcraw_emu from there; move the output TIFF back with
+#      Python (which uses wide Win32 APIs and handles Unicode paths correctly).
+#      Hard links are instantaneous — no data is copied.
+#   3. Fall back to shutil.copy2 if os.link fails (e.g. cross-device).
+# Camera filenames (DSC08543.ARW) are always ASCII, so only directory
+# components need fixing.
+
+def _is_ascii(s: str) -> bool:
+    try:
+        s.encode("ascii")
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+if sys.platform == "win32":
+    import ctypes as _ctypes
+    _k32 = _ctypes.WinDLL("kernel32", use_last_error=True)
+
+    def _short_path(p: Path) -> Path:
+        s = str(p)
+        n = _k32.GetShortPathNameW(s, None, 0)
+        if n == 0:
+            return p
+        buf = _ctypes.create_unicode_buffer(n)
+        if _k32.GetShortPathNameW(s, buf, n) == 0:
+            return p
+        return Path(buf.value)
+else:
+    def _short_path(p: Path) -> Path:
+        return p
+
+
+# Tracks temp dirs created by _ascii_working_dir so atexit can remove any
+# that survive an unclean exit (e.g. unhandled exception before finally runs).
+_pending_cleanup: set[Path] = set()
+
+
+def _atexit_cleanup() -> None:
+    for p in list(_pending_cleanup):
+        shutil.rmtree(p, ignore_errors=True)
+
+
+atexit.register(_atexit_cleanup)
+
+
+def _ascii_working_dir(src: Path) -> tuple[Path, Path | None]:
+    """
+    Return (ascii_src_path, tmp_dir_or_None).
+
+    Windows-only: guarantees ascii_src_path.parent is pure ASCII so
+    dcraw_emu's ANSI fopen() can open it.  tmp_dir is non-None when a temp
+    directory was created; the caller must remove it after conversion.
+    On non-Windows, returns (src, None) immediately.
+    """
+    if sys.platform != "win32":
+        return src, None
+
+    short_parent = _short_path(src.parent)
+    if _is_ascii(str(short_parent)):
+        return short_parent / src.name, None
+
+    # GetShortPathNameW didn't help (8.3 names disabled).
+    # Create a temp dir with an ASCII path on the same drive so os.link works.
+    drive = src.drive  # e.g. "D:"
+    sys_tmp = Path(tempfile.gettempdir())
+    if sys_tmp.drive.upper() == drive.upper() and _is_ascii(str(sys_tmp)):
+        tmp_dir: Path | None = Path(tempfile.mkdtemp(prefix="_r2r_"))
+    else:
+        tmp_dir = None
+        for _ in range(20):
+            candidate = Path(drive + "\\") / f"_r2r_{uuid.uuid4().hex[:8]}"
+            try:
+                candidate.mkdir()
+                tmp_dir = candidate
+                break
+            except (FileExistsError, PermissionError):
+                pass
+
+    if tmp_dir is None:
+        return src, None  # give up; return original path
+
+    _pending_cleanup.add(tmp_dir)
+
+    tmp_src = tmp_dir / src.name  # src.name is ASCII (e.g. DSC08543.ARW)
+    try:
+        os.link(src, tmp_src)       # hard link: instant, no data copied
+    except OSError:
+        _pending_cleanup.discard(tmp_dir)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return src, None            # no cross-drive copy; give up
+
+    return tmp_src, tmp_dir
 
 _MSG_LOG        = "log"
 _MSG_FILE_START = "file_start"   # payload: name
@@ -36,20 +141,55 @@ def _run_one(
 
     lines: list[str] = [f"── {src.name} ──\n"]
     ok = False
+    _tmp_dir: Path | None = None
     try:
+        ascii_src, _tmp_dir = _ascii_working_dir(src)
+        working_dir = ascii_src.parent
+
         cmd = [str(binary)] + options
+
+        # Where the TIFF ultimately needs to land (None = dcraw writes it
+        # straight to the right place via -Z or cwd, no move needed).
+        tiff_move_dest: Path | None = None
+
         if out_dir is not None:
-            cmd += ["-Z", str(out_dir / (src.stem + ".tiff"))]
-        cmd += [str(src)]
+            ascii_out = _short_path(out_dir)
+            if _is_ascii(str(ascii_out)):
+                cmd += ["-Z", str(ascii_out / (src.stem + ".tiff"))]
+            else:
+                # out_dir is non-ASCII: write TIFF to working_dir, move after.
+                cmd += ["-Z", str(working_dir / (src.stem + ".tiff"))]
+                tiff_move_dest = out_dir / (src.stem + ".tiff")
+        elif _tmp_dir is not None:
+            # Explicitly specify output path; without -Z dcraw derives it from the
+            # open file handle (GetFinalPathNameByHandle), which can resolve the hard
+            # link back to the non-ASCII original path and silently fail to write.
+            cmd += ["-Z", str(working_dir / (src.stem + ".tiff"))]
+            tiff_move_dest = src.parent / (src.stem + ".tiff")
+
+        cmd += [str(ascii_src)]
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
-            cwd=str(src.parent),
+            cwd=str(working_dir),
         )
         ok = result.returncode == 0
+
+        if ok and tiff_move_dest is not None:
+            tmp_tiff = working_dir / (src.stem + ".tiff")
+            if not tmp_tiff.exists():
+                ok = False
+                lines.append(f"  [ERROR] output TIFF not found at: {tmp_tiff}\n")
+            else:
+                try:
+                    shutil.move(str(tmp_tiff), str(tiff_move_dest))
+                except OSError as exc:
+                    ok = False
+                    lines.append(f"  [ERROR] could not move TIFF to destination: {exc}\n")
+
         if result.stderr:
             lines.append(result.stderr.rstrip() + "\n")
         if not ok and result.stdout:
@@ -63,6 +203,10 @@ def _run_one(
             lines.append(msg + "\n")
     except Exception as exc:
         lines.append(f"  EXCEPTION: {exc}\n")
+    finally:
+        if _tmp_dir is not None:
+            shutil.rmtree(_tmp_dir, ignore_errors=True)
+            _pending_cleanup.discard(_tmp_dir)
 
     q.put((_MSG_LOG, "".join(lines)))
     return ("ok" if ok else "error"), src
